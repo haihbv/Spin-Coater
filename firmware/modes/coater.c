@@ -63,9 +63,11 @@ void Coater_RampUp(float targetRPM, uint32_t steps, uint32_t rampTimeMs)
  */
 void Coater_RampDown(float targetRPM, uint32_t steps, uint32_t rampTimeMs)
 {
-    if (gCoaterControl.stateCoater != COATER_IDLE)
+    // Cho phép RampDown ngắt RAMP_UP để dừng khẩn cấp
+    // Chỉ không cho phép nếu đang RAMP_DOWN khác
+    if (gCoaterControl.stateCoater == COATER_RAMP_DOWN)
     {
-        return;
+        return; // Đang ramp down rồi, không cho phép ramp down khác
     }
 
     if (steps == 0u || rampTimeMs == 0u)
@@ -190,6 +192,11 @@ void Coater_Update(float targetRpm)
     {
         Esc_SetDuty(ESC_MIN_PWM);
         gCoaterControl.currentRPM = 0.0f;
+        // Reset PID để tránh integral windup
+        sPidMotor.I = 0.0f;
+        sPidMotor.D = 0.0f;
+        sPidMotor.error = 0.0f;
+        sPidMotor.previousTime = 0u;
         return;
     }
 

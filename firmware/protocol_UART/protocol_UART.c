@@ -11,30 +11,58 @@ static void uartSafeStop(void)
     float currentRpm = Encoder_GetRPM(COATER_ENCODER_AVG_SAMPLE);
     if (currentRpm > 10.0f)
     {
+        // RPM cao: giảm dần an toàn để tránh va đập cơ học
         Coater_RampDown(0.0f, RAMP_DEFAULT_RAMP_DOWN_STEPS, RAMP_DEFAULT_RAMP_DOWN_TIME_MS);
     }
-    else if (currentRpm <= 10.0f)
+    else
     {
-        // Nếu RPM đã thấp, có thể dừng ngay
+        // RPM đã thấp: dừng ngay lập tức
         Esc_SetDuty(ESC_MIN_PWM);
+        gCoaterControl.currentRPM = 0.0f;
+        gCoaterControl.targetRPM = 0.0f;
+        gCoaterControl.stateCoater = COATER_IDLE;
     }
-    printf("Safe stop coater before switching mode\r\n");
+    // printf("Safe stop coater before switching mode\r\n");
 }
 
 void UART_ProcessMasterFrame(FrameMaster_t *frameMaster)
 {
     switch (frameMaster->typeMsg)
     {
+    case TYPE_MSG_RELAY_UV_LED_ON:
+        RELAY_UV_LED_ON;
+        IO_BuzzerStart(1, 50, 100); // Beep ngắn xác nhận
+        // printf("UV LED ON\r\n");
+        break;
+    case TYPE_MSG_RELAY_UV_LED_OFF:
+        RELAY_UV_LED_OFF;
+        IO_BuzzerStart(1, 50, 100); // Beep ngắn xác nhận
+        // printf("UV LED OFF\r\n");
+        break;
+
+    case TYPE_MSG_RELAY_VACCUM_ON:
+        RELAY_VACCUMP_PUMP_ON;
+        IO_BuzzerStart(1, 50, 100); // Beep ngắn xác nhận
+        // printf("Vacuum Pump ON\r\n");
+        break;
+    case TYPE_MSG_RELAY_VACCUM_OFF:
+        RELAY_VACCUMP_PUMP_OFF;
+        IO_BuzzerStart(1, 50, 100); // Beep ngắn xác nhận
+        // printf("Vacuum Pump OFF\r\n");
+        break;
+
+    /* ---------- Chon Mode ---------- */
     case TYPE_MSG_SET_ANALOG:
         if (gCurrentMode != MODE_ANALOG)
         {
             if (gCurrentMode != MODE_IDLE)
             {
                 uartSafeStop();
+                // Không chặn, chỉ yêu cầu dừng. Main loop sẽ xử lý.
             }
             gCurrentMode = MODE_ANALOG;
             IO_BuzzerStart(1, 100, 200);
-            printf("[MODE]: ANALOG\r\n");
+            // printf("[MODE]: ANALOG\r\n");
         }
         break;
 
@@ -47,7 +75,7 @@ void UART_ProcessMasterFrame(FrameMaster_t *frameMaster)
             }
             gCurrentMode = MODE_DIGITAL;
             IO_BuzzerStart(1, 100, 200);
-            printf("[MODE]: DIGITAL\r\n");
+            // printf("[MODE]: DIGITAL\r\n");
         }
         break;
 
@@ -60,7 +88,7 @@ void UART_ProcessMasterFrame(FrameMaster_t *frameMaster)
             }
             gCurrentMode = MODE_RAMP;
             IO_BuzzerStart(1, 100, 200);
-            printf("[MODE]: RAMP\r\n");
+            // printf("[MODE]: RAMP\r\n");
         }
         break;
 
@@ -68,7 +96,7 @@ void UART_ProcessMasterFrame(FrameMaster_t *frameMaster)
     case TYPE_MSG_ANALOG_START:
         if (gCurrentMode != MODE_ANALOG)
         {
-            printf("Error: Not in Analog mode\r\n");
+            // printf("Error: Not in Analog mode\r\n");
             return;
         }
 
@@ -76,7 +104,7 @@ void UART_ProcessMasterFrame(FrameMaster_t *frameMaster)
         Mode_AnalogOrDigital(rpmAnalog);
         gIsRunning = true;
         IO_BuzzerStart(2, 100, 200); // Beep khi start
-        printf("ANALOG Start: Target RPM = %.2f\r\n", (double)rpmAnalog);
+        // printf("ANALOG Start: Target RPM = %.2f\r\n", (double)rpmAnalog);
         break;
     case TYPE_MSG_ANALOG_STOP:
         if (gCurrentMode == MODE_ANALOG)
@@ -84,7 +112,7 @@ void UART_ProcessMasterFrame(FrameMaster_t *frameMaster)
             uartSafeStop();
             gIsRunning = false;
             IO_BuzzerStart(3, 100, 200);
-            printf("ANALOG Stop\r\n");
+            // printf("ANALOG Stop\r\n");
         }
         break;
 
@@ -92,7 +120,7 @@ void UART_ProcessMasterFrame(FrameMaster_t *frameMaster)
     case TYPE_MSG_DIGITAL_START:
         if (gCurrentMode != MODE_DIGITAL)
         {
-            printf("Error: Not in Digital mode\r\n");
+            // printf("Error: Not in Digital mode\r\n");
             return;
         }
 
@@ -100,7 +128,7 @@ void UART_ProcessMasterFrame(FrameMaster_t *frameMaster)
         Mode_AnalogOrDigital(rpmDigital);
         gIsRunning = true;
         IO_BuzzerStart(2, 100, 200); // Beep khi start
-        printf("DIGITAL Start: Target RPM = %.2f\r\n", (double)rpmDigital);
+        // printf("DIGITAL Start: Target RPM = %.2f\r\n", (double)rpmDigital);
         break;
     case TYPE_MSG_DIGITAL_STOP:
         if (gCurrentMode == MODE_DIGITAL)
@@ -108,7 +136,7 @@ void UART_ProcessMasterFrame(FrameMaster_t *frameMaster)
             uartSafeStop();
             gIsRunning = false;
             IO_BuzzerStart(3, 100, 200);
-            printf("DIGITAL Stop\r\n");
+            // printf("DIGITAL Stop\r\n");
         }
         break;
 
@@ -116,7 +144,7 @@ void UART_ProcessMasterFrame(FrameMaster_t *frameMaster)
     case TYPE_MSG_RAMP_START:
         if (gCurrentMode != MODE_RAMP)
         {
-            printf("Error: Not in Ramp mode\r\n");
+            // printf("Error: Not in Ramp mode\r\n");
             return;
         }
 
@@ -129,7 +157,7 @@ void UART_ProcessMasterFrame(FrameMaster_t *frameMaster)
         Mode_RampInit(rampParams);
         gIsRunning = true;
         IO_BuzzerStart(2, 100, 200); // Beep khi start ramp
-        printf("RAMP Start: Min=%.2f | TimeMin=%u ms | Max=%.2f | TimeMax=%u ms\r\n", (double)rampParams.minRPM, rampParams.timeMin, (double)rampParams.maxRPM, rampParams.timeMax);
+        // printf("RAMP Start: Min=%.2f | TimeMin=%u ms | Max=%.2f | TimeMax=%u ms\r\n", (double)rampParams.minRPM, rampParams.timeMin, (double)rampParams.maxRPM, rampParams.timeMax);
         break;
     case TYPE_MSG_RAMP_FINISH:
         break;
@@ -139,11 +167,11 @@ void UART_ProcessMasterFrame(FrameMaster_t *frameMaster)
             Mode_RampStop();
             gIsRunning = false;
             IO_BuzzerStart(3, 100, 200);
-            printf("RAMP Stop\r\n");
+            // printf("RAMP Stop\r\n");
         }
         break;
     default:
-        printf("Error: Unknown message type 0x%02X\r\n", frameMaster->typeMsg);
+        // printf("Error: Unknown message type 0x%02X\r\n", frameMaster->typeMsg);
         break;
     }
 }
@@ -153,14 +181,23 @@ void UART_ParserFromEsp(void)
     static u8 sRxBuffer[UART_RX_BUFFER_SIZE];
     static u16 sRxIndex = 0;
 
-    while (UART2.Available())
+    // Giới hạn số frame xử lý mỗi lần để tránh block quá lâu
+    u8 framesProcessed = 0;
+    const u8 MAX_FRAMES_PER_CALL = 3;
+
+    while (UART2.Available() && framesProcessed < MAX_FRAMES_PER_CALL)
     {
         u8 byte = (u8)UART2.GetChar();
 
         if (sRxIndex >= sizeof(sRxBuffer))
         {
-            printf("Uart overflow reset\r\n");
+            // printf("Uart overflow reset\r\n");
             sRxIndex = 0;
+            // Clear buffer để tránh xử lý dữ liệu cũ
+            for (u16 i = 0; i < UART_RX_BUFFER_SIZE; i++)
+            {
+                sRxBuffer[i] = 0;
+            }
         }
 
         sRxBuffer[sRxIndex++] = byte;
@@ -181,7 +218,7 @@ void UART_ParserFromEsp(void)
 
             if (lenData > 12)
             {
-                printf("Uart invalid length\r\n");
+                // printf("Uart invalid length\r\n");
                 sRxIndex = 0;
                 continue;
             }
@@ -195,10 +232,11 @@ void UART_ParserFromEsp(void)
                     FrameMaster_t frame;
                     msgDecodeFrameMaster(sRxBuffer, &frame);
                     UART_ProcessMasterFrame(&frame);
+                    framesProcessed++; // Tăng biến đếm frame
                 }
                 else
                 {
-                    printf("Error!\r\n");
+                    // printf("Error!\r\n");
                 }
                 sRxIndex = 0;
             }
@@ -280,8 +318,8 @@ void UART_SendRampFinish(void)
         }
     }
 
-    // Beep 3 lan khi ramp finish thanh cong
-    IO_BuzzerStart(3, 100, 200);
+    // Beep 2 lan khi ramp finish thanh cong
+    IO_BuzzerStart(2, 100, 200);
 
-    printf("Ramp Finish Success\r\n");
+    // printf("Ramp Finish Success\r\n");
 }

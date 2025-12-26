@@ -121,11 +121,22 @@ int32_t Encoder_GetTotalCount(void)
  */
 uint16_t Encoder_GetPulseCount(uint32_t sampleTimeMs)
 {
-	static uint32_t lastTime = 0;  // thời điểm lấy mẫu lần trước
-	static uint16_t lastCount = 0; // giá trị counter lần trước
+	static uint32_t lastTime = 0;	// thời điểm lấy mẫu lần trước
+	static uint16_t lastCount = 0;	// giá trị counter lần trước
+	static bool isFirstCall = true; // Đánh dấu lần đầu tiên gọi hàm
 
 	uint32_t currentTime = millis();
 	uint32_t elapsed = currentTime - lastTime; // thời gian trôi qua từ lúc lấy mẫu trước đó
+
+	// Lần đầu tiên gọi hàm sau reset: khởi tạo và trả về 0
+	if (isFirstCall)
+	{
+		isFirstCall = false;
+		lastTime = currentTime;
+		lastCount = TIM_GetCounter(TIM2);
+		sPulseRate = 0;
+		return 0;
+	}
 
 	if (elapsed < sampleTimeMs) // chưa đủ thời gian lấy mẫu thì trả về giá trị cũ
 	{
@@ -149,6 +160,16 @@ uint16_t Encoder_GetPulseCount(uint32_t sampleTimeMs)
 	if (elapsed < minAllowed)
 	{
 		return sPulseRate; // bỏ qua nếu thời gian lấy mẫu chưa đủ 80% thời gian yêu cầu
+	}
+
+	// Xử lý trường hợp elapsed quá lớn (millis overflow hoặc lần đầu sau reset)
+	uint32_t maxAllowed = sampleTimeMs * 3u; // Giới hạn 3x thời gian mẫu
+	if (elapsed > maxAllowed)
+	{
+		// Nếu quá lâu không đọc, reset và trả 0
+		lastTime = currentTime;
+		sPulseRate = 0;
+		return 0;
 	}
 
 	if (elapsed != sampleTimeMs)

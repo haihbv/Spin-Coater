@@ -1,3 +1,9 @@
+/**
+ * @file main.h
+ * @brief Header for project Spin Coater.
+ * @author haihbv
+ * @date December 2025
+ */
 #ifndef __MESSAGE_H__
 #define __MESSAGE_H__
 
@@ -21,9 +27,15 @@ typedef enum
 
 typedef enum
 {
-    TYPE_MSG_VACCUM_ON = 0x13,
-    TYPE_MSG_VACCUM_OFF = 0x14
-} Type_Message_Vaccum_e;
+    TYPE_MSG_RELAY_VACCUM_ON = 0x13,
+    TYPE_MSG_RELAY_VACCUM_OFF = 0x14
+} Type_Message_Relay_Vaccum_e;
+
+typedef enum
+{
+    TYPE_MSG_RELAY_UV_LED_ON = 0x15,
+    TYPE_MSG_RELAY_UV_LED_OFF = 0x16
+} Type_Message_Relay_UV_LED_e;
 
 // Analog - Master (ESP32)
 typedef enum

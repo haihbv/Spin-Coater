@@ -1,3 +1,9 @@
+/**
+ * @file main.h
+ * @brief Header for project Spin Coater.
+ * @author haihbv
+ * @date December 2025
+ */
 #ifndef COATER_H_
 #define COATER_H_
 

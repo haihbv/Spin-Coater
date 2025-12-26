@@ -5,8 +5,6 @@ void setup()
 {
     SystemInit();
     Delay.Init();
-    UART1.Init(115200);
-    UART2.Init(115200);
 
     IO_Init();
     RELAY_ON;
@@ -18,9 +16,15 @@ void setup()
 
     coater_setup_pid_init();
 
-    IO_BuzzerStart(3, 100, 200);
+    UART1.Init(115200);
+    UART2.Init(115200);
 
-    printf("==== SYSTEM COATER ====\r\n");
+    DelayMs(3000);
+
+    // Beep bao hieu he thong da san sang
+    IO_BuzzerStart(2, 100, 200);
+
+    // printf("==== SYSTEM COATER READY ====\r\n");
 }
 
 void loop()

@@ -1,3 +1,9 @@
+/**
+ * @file main.h
+ * @brief Header for project Spin Coater.
+ * @author haihbv
+ * @date December 2025
+ */
 #ifndef __PROTOCOL_UART_H__
 #define __PROTOCOL_UART_H__
 
